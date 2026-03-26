@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>K26 Scavenger Hunt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1c1c1c;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0ede8;
+    --muted: #888;
+    --dim: #555;
+    --green: #1D9E75;
+    --green-dim: rgba(29,158,117,0.15);
+    --green-bright: #2ec990;
+    --amber: #d4871a;
+    --amber-dim: rgba(212,135,26,0.15);
+    --purple: #7c6ff7;
+    --purple-dim: rgba(124,111,247,0.15);
+    --coral: #e05a3a;
+    --coral-dim: rgba(224,90,58,0.15);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overscroll-behavior: none; }
+
+  /* ── ONBOARDING ── */
+  #onboard {
+    position: fixed; inset: 0; z-index: 999;
+    background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 32px 24px;
+  }
+  #onboard h1 { font-family:'Syne',sans-serif; font-size:32px; font-weight:800; letter-spacing:-1px; color:var(--text); text-align:center; margin-bottom:8px; }
+  #onboard p { font-size:13px; color:var(--muted); text-align:center; margin-bottom:36px; }
+  .onboard-card { width:100%; max-width:380px; background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius); padding:24px; }
+  .onboard-card label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:8px; }
+  .onboard-card input {
+    width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius-sm);
+    color:var(--text); font-family:'DM Sans',sans-serif; font-size:15px; padding:12px 14px; outline:none;
+    transition: border-color 0.2s;
+  }
+  .onboard-card input:focus { border-color: var(--green); }
+  .onboard-card .hint { font-size:11px; color:var(--dim); margin-top:6px; }
+  .onboard-card .onboard-btn {
+    margin-top:20px; width:100%; background:var(--green); border:none; border-radius:var(--radius-sm);
+    color:#fff; font-family:'Syne',sans-serif; font-size:15px; font-weight:700; padding:14px;
+    cursor:pointer; transition: background 0.15s;
+  }
+  .onboard-card .onboard-btn:hover { background:#188a63; }
+  .onboard-card .error { color:var(--coral); font-size:12px; margin-top:8px; display:none; }
+
+  /* ── TABS ── */
+  .tab-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(10,10,10,0.96); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 100;
+  }
+  .tab-btn {
+    flex: 1; display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding: 10px 8px 6px;
+    background:none; border:none; color:var(--dim); cursor:pointer;
+    font-family:'DM Sans',sans-serif; font-size:10px; letter-spacing:0.3px;
+    transition: color 0.15s;
+  }
+  .tab-btn.active { color:var(--green-bright); }
+  .tab-btn svg { width:20px; height:20px; }
+  .tab-badge {
+    position:absolute; top:6px; right: calc(50% - 18px);
+    background:var(--coral); color:#fff; font-size:9px; font-weight:700;
+    border-radius:99px; padding:1px 5px; min-width:16px; text-align:center;
+    display:none;
+  }
+  .tab-btn.has-badge { position:relative; }
+  .tab-btn.has-badge .tab-badge { display:block; }
+
+  /* ── SCREENS ── */
+  .screen { display:none; padding-bottom:80px; }
+  .screen.active { display:block; }
+
+  /* ── HEADER ── */
+  .header {
+    position: sticky; top: 0; z-index: 90;
+    background: rgba(10,10,10,0.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px 14px;
+  }
+  .header-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  .header-left h1 { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; letter-spacing:-0.5px; line-height:1.1; color:var(--text); }
+  .header-left p { font-size:11px; color:var(--muted); margin-top:3px; }
+  .score-pill { background:var(--green-dim); border:1px solid rgba(29,158,117,0.3); border-radius:99px; padding:6px 14px; text-align:center; flex-shrink:0; }
+  .score-pill .pts { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--green-bright); line-height:1; }
+  .score-pill .pts-lbl { font-size:9px; color:var(--green); letter-spacing:0.5px; text-transform:uppercase; }
+  .progress-bar { height:3px; background:var(--surface2); border-radius:99px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--green),var(--green-bright)); border-radius:99px; transition:width 0.4s cubic-bezier(0.34,1.56,0.64,1); width:0%; }
+  .progress-meta { display:flex; justify-content:space-between; margin-top:5px; font-size:10px; color:var(--dim); }
+
+  /* ── FILTERS ── */
+  .filters-wrap { padding:14px 20px 2px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .filters-wrap::-webkit-scrollbar { display:none; }
+  .filters { display:flex; gap:6px; width:max-content; padding-bottom:12px; }
+  .ftag { font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; padding:6px 14px; border-radius:99px; border:1px solid var(--border2); background:transparent; color:var(--muted); cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+  .ftag.active { background:var(--green); border-color:var(--green); color:#fff; }
+  .ftag:active { transform:scale(0.96); }
+
+  /* ── TASKS ── */
+  .tasks-wrap { padding:6px 16px 20px; }
+  .cat-label { font-family:'Syne',sans-serif; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); padding:18px 4px 8px; }
+  .cat-label:first-child { padding-top:8px; }
+  .task-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:8px; display:flex; align-items:flex-start; gap:12px; cursor:pointer; transition:all 0.2s; -webkit-user-select:none; user-select:none; }
+  .task-card:active { transform:scale(0.985); }
+  .task-card.done { background:var(--green-dim); border-color:rgba(29,158,117,0.25); }
+  .task-card.done .task-title { color:var(--green-bright); }
+  .task-card.done .task-desc { color:rgba(29,158,117,0.6); }
+  .check { width:22px; height:22px; border-radius:50%; border:2px solid var(--border2); flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+  .task-card.done .check { background:var(--green); border-color:var(--green); }
+  .check-icon { opacity:0; transform:scale(0); transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+  .task-card.done .check-icon { opacity:1; transform:scale(1); }
+  .task-body { flex:1; min-width:0; }
+  .task-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:3px; }
+  .task-title { font-family:'Syne',sans-serif; font-size:14px; font-weight:600; color:var(--text); line-height:1.3; flex:1; }
+  .task-desc { font-size:12px; color:var(--muted); line-height:1.5; }
+  .pts-badge { font-family:'Syne',sans-serif; font-size:11px; font-weight:700; padding:3px 8px; border-radius:99px; flex-shrink:0; white-space:nowrap; }
+  .pts-1 { background:var(--green-dim); color:var(--green-bright); }
+  .pts-2 { background:var(--purple-dim); color:var(--purple); }
+  .pts-3 { background:var(--amber-dim); color:var(--amber); }
+  .pts-5 { background:var(--coral-dim); color:var(--coral); }
+
+  /* ── MILESTONES ── */
+  .milestones { display:flex; gap:6px; padding:0 16px 4px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .milestones::-webkit-scrollbar { display:none; }
+  .milestone { display:flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border); border-radius:99px; padding:5px 12px 5px 8px; white-space:nowrap; flex-shrink:0; }
+  .milestone.reached { border-color:rgba(29,158,117,0.35); background:var(--green-dim); }
+  .milestone-dot { width:8px; height:8px; border-radius:50%; background:var(--border2); flex-shrink:0; }
+  .milestone.reached .milestone-dot { background:var(--green-bright); }
+  .milestone-text { font-size:11px; color:var(--dim); }
+  .milestone.reached .milestone-text { color:var(--green-bright); }
+
+  /* ── LEADERBOARD ── */
+  .lb-header { padding:20px 20px 8px; }
+  .lb-header h2 { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; }
+  .lb-header p { font-size:12px; color:var(--muted); margin-top:4px; }
+  .lb-list { padding:0 16px 20px; }
+  .lb-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; gap:12px;
+  }
+  .lb-card.me { border-color:rgba(29,158,117,0.4); background:var(--green-dim); }
+  .lb-rank { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:var(--dim); width:28px; text-align:center; flex-shrink:0; }
+  .lb-rank.gold { color:#f0c040; }
+  .lb-rank.silver { color:#aaa; }
+  .lb-rank.bronze { color:#c87941; }
+  .lb-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-size:14px; font-weight:800; flex-shrink:0; }
+  .lb-info { flex:1; min-width:0; }
+  .lb-name { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lb-name .you-tag { font-size:10px; font-weight:500; color:var(--green-bright); margin-left:6px; }
+  .lb-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+  .lb-pts { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:var(--green-bright); flex-shrink:0; }
+  .lb-pts .lb-pts-lbl { font-size:9px; color:var(--green); display:block; text-align:right; }
+  .lb-empty { text-align:center; padding:48px 20px; color:var(--dim); font-size:14px; }
+  .lb-refresh { display:flex; align-items:center; justify-content:center; gap:8px; padding:16px; }
+  .lb-refresh button { background:none; border:1px solid var(--border2); border-radius:99px; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:12px; padding:6px 16px; cursor:pointer; }
+  .lb-refresh button:active { background:var(--surface2); }
+
+  /* ── CHAT ── */
+  .chat-header { padding:20px 20px 8px; border-bottom:1px solid var(--border); }
+  .chat-header h2 { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; }
+  .chat-header p { font-size:12px; color:var(--muted); margin-top:4px; }
+  .chat-messages { padding:12px 16px; display:flex; flex-direction:column; gap:10px; min-height:200px; }
+  .chat-msg { display:flex; gap:10px; align-items:flex-start; }
+  .chat-msg.mine { flex-direction:row-reverse; }
+  .chat-av { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-size:11px; font-weight:800; flex-shrink:0; }
+  .chat-bubble-wrap { display:flex; flex-direction:column; max-width:75%; }
+  .chat-mine-wrap { align-items:flex-end; }
+  .chat-sender { font-size:10px; color:var(--muted); margin-bottom:3px; }
+  .chat-mine-wrap .chat-sender { text-align:right; }
+  .chat-bubble { background:var(--surface2); border-radius:12px; border-bottom-left-radius:3px; padding:9px 12px; font-size:13px; line-height:1.5; color:var(--text); }
+  .chat-msg.mine .chat-bubble { background:var(--green); border-radius:12px; border-bottom-right-radius:3px; }
+  .chat-time { font-size:9px; color:var(--dim); margin-top:3px; }
+  .chat-mine-wrap .chat-time { text-align:right; }
+  .chat-system { text-align:center; font-size:11px; color:var(--dim); padding:4px 0; font-style:italic; }
+  .chat-input-bar {
+    position:sticky; bottom:64px;
+    background:rgba(10,10,10,0.97); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border-top:1px solid var(--border);
+    padding:10px 16px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom,0px));
+    display:flex; gap:8px;
+  }
+  .chat-input {
+    flex:1; background:var(--surface2); border:1px solid var(--border2); border-radius:99px;
+    color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; padding:10px 16px;
+    outline:none; transition:border-color 0.2s;
+  }
+  .chat-input:focus { border-color:var(--green); }
+  .chat-send {
+    width:40px; height:40px; border-radius:50%; background:var(--green); border:none;
+    color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:background 0.15s;
+  }
+  .chat-send:hover { background:#188a63; }
+  .chat-send:active { transform:scale(0.94); }
+  .chat-empty { text-align:center; padding:40px 20px; color:var(--dim); font-size:13px; }
+
+  /* ── PROFILE SCREEN ── */
+  .profile-wrap { padding:20px; }
+  .profile-card { background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius); padding:24px; text-align:center; margin-bottom:16px; }
+  .profile-av-big { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Syne',sans-serif; font-size:24px; font-weight:800; margin:0 auto 12px; }
+  .profile-name { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; }
+  .profile-since { font-size:12px; color:var(--muted); margin-top:4px; }
+  .profile-stats { display:flex; gap:8px; margin-top:16px; }
+  .pstat { flex:1; background:var(--surface2); border-radius:var(--radius-sm); padding:10px; text-align:center; }
+  .pstat-val { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--green-bright); }
+  .pstat-lbl { font-size:9px; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+  .profile-section { margin-bottom:16px; }
+  .profile-section-title { font-family:'Syne',sans-serif; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); margin-bottom:10px; }
+  .profile-btn { width:100%; background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; padding:13px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .profile-btn:active { background:var(--surface2); }
+  .profile-btn.danger { color:var(--coral); }
+  .profile-btn svg { opacity:0.5; }
+
+  /* ── TOAST ── */
+  .toast { position:fixed; top:-80px; left:50%; transform:translateX(-50%); background:var(--green); color:#fff; font-family:'Syne',sans-serif; font-size:13px; font-weight:700; padding:12px 24px; border-radius:99px; white-space:nowrap; z-index:999; transition:top 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+  .toast.show { top:80px; }
+
+  /* ── LOADING ── */
+  .loading { display:flex; align-items:center; justify-content:center; gap:8px; padding:32px; color:var(--muted); font-size:13px; }
+  .spinner { width:16px; height:16px; border:2px solid var(--border2); border-top-color:var(--green); border-radius:50%; animation:spin 0.7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* install banner */
+  #install-banner {
+    display:none; position:fixed; top:0; left:0; right:0; z-index:998;
+    background:var(--surface); border-bottom:1px solid var(--border2);
+    padding:12px 16px; align-items:center; gap:10px;
+  }
+  #install-banner.show { display:flex; }
+  #install-banner p { flex:1; font-size:12px; color:var(--muted); }
+  #install-banner strong { color:var(--text); }
+  #install-banner .ib-btn { background:var(--green); border:none; border-radius:99px; color:#fff; font-family:'Syne',sans-serif; font-size:12px; font-weight:700; padding:7px 14px; cursor:pointer; flex-shrink:0; }
+  #install-banner .ib-close { background:none; border:none; color:var(--dim); font-size:18px; cursor:pointer; padding:0 4px; }
+</style>
+</head>
+<body>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner">
+  <p><strong>Add to Home Screen</strong> to use as an app anytime.</p>
+  <button class="ib-btn" id="install-btn">Install</button>
+  <button class="ib-close" onclick="document.getElementById('install-banner').classList.remove('show')">×</button>
+</div>
+
+<!-- ONBOARDING -->
+<div id="onboard">
+  <h1>K26 Hunt</h1>
+  <p>Knowledge 2026 · Las Vegas · May 5–7</p>
+  <div class="onboard-card">
+    <label for="username-input">Choose your username</label>
+    <input type="text" id="username-input" placeholder="e.g. ServiceNow_Sam" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="hint">2–20 characters, letters & numbers only. This is how others see you.</div>
+    <div class="error" id="ob-error"></div>
+    <button class="onboard-btn" onclick="startHunt()">Let's Hunt →</button>
+  </div>
+</div>
+
+<!-- SCREENS -->
+<div id="screen-hunt" class="screen active">
+  <div class="header">
+    <div class="header-top">
+      <div class="header-left">
+        <h1>K26 Hunt</h1>
+        <p>Knowledge 2026 · Las Vegas · May 5–7</p>
+      </div>
+      <div class="score-pill">
+        <div class="pts" id="pts-display">0</div>
+        <div class="pts-lbl">points</div>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    <div class="progress-meta">
+      <span id="prog-done">0 of 30 complete</span>
+      <span id="prog-pct">0 / 65 pts</span>
+    </div>
+  </div>
+  <div class="filters-wrap"><div class="filters" id="filters"></div></div>
+  <div class="milestones" id="milestones"></div>
+  <div class="tasks-wrap" id="tasks-wrap"></div>
+</div>
+
+<div id="screen-lb" class="screen">
+  <div class="lb-header">
+    <h2>🏆 Leaderboard</h2>
+    <p>Live standings — updates every 30 seconds</p>
+  </div>
+  <div class="lb-refresh">
+    <button onclick="loadLeaderboard()">↻ Refresh now</button>
+  </div>
+  <div class="lb-list" id="lb-list"><div class="loading"><div class="spinner"></div> Loading standings…</div></div>
+</div>
+
+<div id="screen-chat" class="screen">
+  <div class="chat-header">
+    <h2>💬 Team Chat</h2>
+    <p id="chat-online-count">Open to all attendees</p>
+  </div>
+  <div class="chat-messages" id="chat-messages"><div class="chat-empty">Loading messages…</div></div>
+  <div class="chat-input-bar">
+    <input type="text" class="chat-input" id="chat-input" placeholder="Message the group…" maxlength="300" autocomplete="off">
+    <button class="chat-send" onclick="sendMessage()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 8L2 2l3 6-3 6 12-6z" fill="white"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="screen-profile" class="screen">
+  <div class="profile-wrap">
+    <div class="profile-card">
+      <div class="profile-av-big" id="profile-av-big"></div>
+      <div class="profile-name" id="profile-name-display"></div>
+      <div class="profile-since" id="profile-since"></div>
+      <div class="profile-stats">
+        <div class="pstat"><div class="pstat-val" id="p-pts">0</div><div class="pstat-lbl">Points</div></div>
+        <div class="pstat"><div class="pstat-val" id="p-done">0</div><div class="pstat-lbl">Done</div></div>
+        <div class="pstat"><div class="pstat-val" id="p-rank">#–</div><div class="pstat-lbl">Rank</div></div>
+      </div>
+    </div>
+    <div class="profile-section">
+      <div class="profile-section-title">Account</div>
+      <button class="profile-btn" onclick="shareHunt()">
+        Share Hunt with Friends
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 10c-.8 0-1.5.3-2 .8L6.5 8.6c.1-.2.1-.4.1-.6s0-.4-.1-.6L10 5.2c.5.5 1.2.8 2 .8 1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3c0 .2 0 .4.1.6L5.6 5.8C5.1 5.3 4.4 5 3.6 5c-1.7 0-3 1.3-3 3s1.3 3 3 3c.8 0 1.5-.3 2-.8l3.5 2.2c-.1.2-.1.4-.1.6 0 1.7 1.3 3 3 3s3-1.3 3-3-1.3-3-3-3z" fill="currentColor"/></svg>
+      </button>
+      <button class="profile-btn danger" onclick="resetAll()">
+        Reset My Progress
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3 9.5L10 12 8 10l-2 2-1-1.5L7 8.5 5 6.5 6 5 8 7l2-2 1 1.5L9 8.5l2 2z" fill="currentColor"/></svg>
+      </button>
+      <button class="profile-btn danger" onclick="logout()">
+        Log Out / Change Username
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 14H2V2h4M10 11l3-3-3-3M13 8H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('hunt',this)" id="tab-hunt">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    Hunt
+  </button>
+  <button class="tab-btn" onclick="switchTab('lb',this)" id="tab-lb">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Standings
+  </button>
+  <button class="tab-btn has-badge" onclick="switchTab('chat',this)" id="tab-chat">
+    <div class="tab-badge" id="chat-badge">0</div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Chat
+  </button>
+  <button class="tab-btn" onclick="switchTab('profile',this)" id="tab-profile">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Me
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════
+const TASKS = [
+  {id:1,  cat:"Networking", pts:1, title:"First connection made",             desc:"Exchange contact info with someone you just met."},
+  {id:2,  cat:"Networking", pts:2, title:"Meet someone from a new industry",  desc:"Find someone attending from a completely different sector."},
+  {id:3,  cat:"Networking", pts:3, title:"Collect 5 business cards",          desc:"The old-school way. Bonus if any are still paper."},
+  {id:4,  cat:"Networking", pts:2, title:"LinkedIn connect on the spot",       desc:"Open the app and connect with someone in real-time."},
+  {id:5,  cat:"Networking", pts:5, title:"Get a 1:1 with a ServiceNow PM",    desc:"Track down a product manager and give them your feedback."},
+  {id:6,  cat:"Sessions",   pts:1, title:"Attend your first session",         desc:"Any breakout, keynote, or deep-dive counts."},
+  {id:7,  cat:"Sessions",   pts:2, title:"Attend 3 different track types",    desc:"E.g., IT, HR, and Security — mix it up."},
+  {id:8,  cat:"Sessions",   pts:2, title:"Ask a question in Q&A",             desc:"Raise your hand and get your question in."},
+  {id:9,  cat:"Sessions",   pts:3, title:"Get into a waitlisted session",     desc:"Camp out, arrive early, and earn that seat."},
+  {id:10, cat:"Sessions",   pts:3, title:"Attend a hands-on lab",             desc:"Actually sit down and build something."},
+  {id:11, cat:"Sessions",   pts:5, title:"Speak at or moderate a session",    desc:"Volunteer, present a lightning talk, or lead a discussion."},
+  {id:12, cat:"Keynote",    pts:1, title:"Watch the opening keynote",         desc:"Be there live for the main stage moment."},
+  {id:13, cat:"Keynote",    pts:2, title:"Spot a live product demo",          desc:"Any demo where something actually runs on screen."},
+  {id:14, cat:"Keynote",    pts:3, title:"Hear a customer success story",     desc:"A real customer shares results from the main stage."},
+  {id:15, cat:"Keynote",    pts:3, title:"Now Assist featured live",          desc:"AI assistant demo on the main or session stage."},
+  {id:16, cat:"Expo Floor", pts:1, title:"Visit a partner booth",             desc:"Stop and actually listen to a demo."},
+  {id:17, cat:"Expo Floor", pts:2, title:"Visit 5 different booths",          desc:"Variety counts — no doubling back."},
+  {id:18, cat:"Expo Floor", pts:2, title:"Collect swag from 3 vendors",      desc:"T-shirt, tote, gadget — anything goes."},
+  {id:19, cat:"Expo Floor", pts:3, title:"Watch an agentic AI workflow demo", desc:"See an AI agent execute a multi-step task live."},
+  {id:20, cat:"Expo Floor", pts:3, title:"Find a hands-on tech sandbox",     desc:"A booth where you can try the product yourself."},
+  {id:21, cat:"Expo Floor", pts:5, title:"Get a personalized platform demo", desc:"A rep walks you through a use case built for your role."},
+  {id:22, cat:"Vegas",      pts:1, title:"Photo at The Venetian",             desc:"Classic K26 backdrop. Tag it."},
+  {id:23, cat:"Vegas",      pts:1, title:"Spot the Sphere",                   desc:"Las Vegas skyline in the background counts."},
+  {id:24, cat:"Vegas",      pts:2, title:"Grab a meal on the Strip",          desc:"Anything outside the convention center."},
+  {id:25, cat:"Vegas",      pts:3, title:"Catch the Backstreet Boys show",   desc:"K26's official after-party performers."},
+  {id:26, cat:"Buzz Bingo", pts:1, title:"Hear 'digital transformation'",    desc:"First time someone says it in a session."},
+  {id:27, cat:"Buzz Bingo", pts:1, title:"Hear 'agentic AI' 3 times",        desc:"Count them in a single session."},
+  {id:28, cat:"Buzz Bingo", pts:2, title:"Hear 'single platform' in a keynote", desc:"The classic ServiceNow value prop."},
+  {id:29, cat:"Buzz Bingo", pts:2, title:"Hear 'co-pilot' and 'agent' together", desc:"In the same sentence. It will happen."},
+  {id:30, cat:"Buzz Bingo", pts:3, title:"Spot a before/after AI slide",     desc:"That chart showing dramatic improvement."},
+];
+const CATS = ["All","Networking","Sessions","Keynote","Expo Floor","Vegas","Buzz Bingo"];
+const MILESTONES = [{pts:10,label:"Getting started"},{pts:25,label:"Halfway hero"},{pts:50,label:"K26 champion"},{pts:65,label:"Legend status"}];
+const TOTAL_PTS = TASKS.reduce((s,t)=>s+t.pts,0); // 65
+const AVATAR_COLORS = ['#1D9E75','#7c6ff7','#d4871a','#e05a3a','#d45378','#3a8fe0','#9e6e1d','#3ae0c9'];
+
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let username = localStorage.getItem('k26-username') || '';
+let userId   = localStorage.getItem('k26-userid')   || '';
+let done     = new Set(JSON.parse(localStorage.getItem('k26-done') || '[]'));
+let activeCat = 'All';
+let lastMilestone = -1;
+let lbData = [];
+let chatMessages = [];
+let lastChatTs = 0;
+let unreadChat = 0;
+let chatPollingInterval = null;
+let lbPollingInterval   = null;
+
+// ══════════════════════════════════════════
+//  AVATAR
+// ══════════════════════════════════════════
+function avatarColor(name) {
+  let h = 0; for (let c of name) h = (h*31+c.charCodeAt(0))&0xffffffff;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+function avatarInitials(name) { return name.slice(0,2).toUpperCase(); }
+function makeAvatar(name, size=36) {
+  const el = document.createElement('div');
+  el.className = 'lb-avatar';
+  el.style.cssText = `width:${size}px;height:${size}px;background:${avatarColor(name)};font-size:${Math.round(size*0.38)}px;`;
+  el.textContent = avatarInitials(name);
+  return el;
+}
+
+// ══════════════════════════════════════════
+//  STORAGE (Claude Artifacts persistent API)
+// ══════════════════════════════════════════
+async function stoSet(key, value, shared=true) {
+  try { return await window.storage.set(key, JSON.stringify(value), shared); } catch(e) { return null; }
+}
+async function stoGet(key, shared=true) {
+  try {
+    const r = await window.storage.get(key, shared);
+    return r ? JSON.parse(r.value) : null;
+  } catch(e) { return null; }
+}
+async function stoList(prefix, shared=true) {
+  try {
+    const r = await window.storage.list(prefix, shared);
+    return r ? r.keys : [];
+  } catch(e) { return []; }
+}
+async function stoDel(key, shared=true) {
+  try { return await window.storage.delete(key, shared); } catch(e) { return null; }
+}
+
+// ══════════════════════════════════════════
+//  ONBOARDING
+// ══════════════════════════════════════════
+async function startHunt() {
+  const input = document.getElementById('username-input');
+  const raw = input.value.trim();
+  const err = document.getElementById('ob-error');
+  err.style.display = 'none';
+  if (!/^[a-zA-Z0-9_]{2,20}$/.test(raw)) {
+    err.textContent = 'Username must be 2–20 characters (letters, numbers, underscores).';
+    err.style.display = 'block'; return;
+  }
+  // check uniqueness
+  const existing = await stoGet('user:'+raw.toLowerCase());
+  if (existing && existing.userId !== userId) {
+    err.textContent = 'That username is taken. Try another!';
+    err.style.display = 'block'; return;
+  }
+  // generate id if new
+  if (!userId) userId = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  username = raw;
+  localStorage.setItem('k26-username', username);
+  localStorage.setItem('k26-userid', userId);
+  await registerUser();
+  initApp();
+  document.getElementById('onboard').style.display = 'none';
+}
+
+async function registerUser() {
+  await stoSet('user:'+username.toLowerCase(), { userId, username, joined: Date.now() });
+  await pushScore();
+}
+
+// ══════════════════════════════════════════
+//  SCORE SYNC
+// ══════════════════════════════════════════
+async function pushScore() {
+  if (!username) return;
+  await stoSet('score:'+username.toLowerCase(), {
+    userId, username, pts: earned(), done: done.size, ts: Date.now()
+  });
+}
+
+// ══════════════════════════════════════════
+//  LEADERBOARD
+// ══════════════════════════════════════════
+async function loadLeaderboard() {
+  const el = document.getElementById('lb-list');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div> Loading…</div>';
+  const keys = await stoList('score:');
+  const entries = [];
+  for (const key of keys) {
+    const d = await stoGet(key);
+    if (d) entries.push(d);
+  }
+  entries.sort((a,b)=>b.pts-a.pts||(b.done-a.done));
+  lbData = entries;
+  renderLeaderboard();
+  updateProfileRank();
+}
+
+function renderLeaderboard() {
+  const el = document.getElementById('lb-list');
+  if (!lbData.length) { el.innerHTML = '<div class="lb-empty">No players yet — be the first!</div>'; return; }
+  const rankLabels = ['gold','silver','bronze'];
+  el.innerHTML = lbData.map((p,i)=>{
+    const isMe = p.username.toLowerCase() === username.toLowerCase();
+    const rankClass = rankLabels[i] || '';
+    const rankIcon = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+    const avColor = avatarColor(p.username);
+    const avInit = avatarInitials(p.username);
+    const age = p.ts ? timeAgo(p.ts) : '';
+    return `<div class="lb-card${isMe?' me':''}">
+      <div class="lb-rank ${rankClass}">${rankIcon}</div>
+      <div class="lb-avatar" style="background:${avColor};font-size:13px;width:36px;height:36px;">${avInit}</div>
+      <div class="lb-info">
+        <div class="lb-name">${escHtml(p.username)}${isMe?'<span class="you-tag">you</span>':''}</div>
+        <div class="lb-meta">${p.done} tasks done · ${age}</div>
+      </div>
+      <div class="lb-pts">${p.pts}<span class="lb-pts-lbl">pts</span></div>
+    </div>`;
+  }).join('');
+}
+
+function updateProfileRank() {
+  const idx = lbData.findIndex(p=>p.username.toLowerCase()===username.toLowerCase());
+  document.getElementById('p-rank').textContent = idx >= 0 ? '#'+(idx+1) : '#–';
+}
+
+// ══════════════════════════════════════════
+//  CHAT
+// ══════════════════════════════════════════
+async function loadChat() {
+  const keys = await stoList('chat:');
+  const msgs = [];
+  for (const key of keys) {
+    const m = await stoGet(key);
+    if (m) msgs.push(m);
+  }
+  msgs.sort((a,b)=>a.ts-b.ts);
+  chatMessages = msgs;
+  if (msgs.length) lastChatTs = msgs[msgs.length-1].ts;
+  renderChat();
+}
+
+async function pollChat() {
+  const keys = await stoList('chat:');
+  const newMsgs = [];
+  for (const key of keys) {
+    const m = await stoGet(key);
+    if (m && m.ts > lastChatTs) newMsgs.push(m);
+  }
+  if (newMsgs.length) {
+    newMsgs.sort((a,b)=>a.ts-b.ts);
+    chatMessages = [...chatMessages, ...newMsgs];
+    lastChatTs = chatMessages[chatMessages.length-1].ts;
+    const chatScreen = document.getElementById('screen-chat');
+    if (!chatScreen.classList.contains('active')) {
+      unreadChat += newMsgs.length;
+      updateChatBadge();
+    }
+    renderChat();
+  }
+}
+
+function renderChat() {
+  const el = document.getElementById('chat-messages');
+  if (!chatMessages.length) { el.innerHTML = '<div class="chat-empty">No messages yet. Say hello! 👋</div>'; return; }
+  el.innerHTML = chatMessages.map(m=>{
+    if (m.type === 'system') return `<div class="chat-system">${escHtml(m.text)}</div>`;
+    const isMe = m.username.toLowerCase() === username.toLowerCase();
+    const avColor = avatarColor(m.username);
+    const avInit  = avatarInitials(m.username);
+    const t = timeAgo(m.ts);
+    if (isMe) return `<div class="chat-msg mine">
+      <div class="chat-av" style="background:${avColor};font-size:11px;">${avInit}</div>
+      <div class="chat-bubble-wrap chat-mine-wrap">
+        <div class="chat-sender">${escHtml(m.username)}</div>
+        <div class="chat-bubble">${escHtml(m.text)}</div>
+        <div class="chat-time">${t}</div>
+      </div>
+    </div>`;
+    return `<div class="chat-msg">
+      <div class="chat-av" style="background:${avColor};font-size:11px;">${avInit}</div>
+      <div class="chat-bubble-wrap">
+        <div class="chat-sender">${escHtml(m.username)}</div>
+        <div class="chat-bubble">${escHtml(m.text)}</div>
+        <div class="chat-time">${t}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || !username) return;
+  input.value = '';
+  const ts = Date.now();
+  const msg = { username, text, ts, userId };
+  const key = 'chat:' + ts + '_' + Math.random().toString(36).slice(2,6);
+  await stoSet(key, msg);
+  chatMessages.push(msg);
+  lastChatTs = ts;
+  renderChat();
+}
+
+function updateChatBadge() {
+  const badge = document.getElementById('chat-badge');
+  const tab = document.getElementById('tab-chat');
+  if (unreadChat > 0) {
+    badge.textContent = unreadChat > 9 ? '9+' : unreadChat;
+    tab.classList.add('has-badge');
+  } else {
+    tab.classList.remove('has-badge');
+  }
+}
+
+// ══════════════════════════════════════════
+//  HUNT LOGIC
+// ══════════════════════════════════════════
+function save() { localStorage.setItem('k26-done', JSON.stringify([...done])); }
+function ptClass(p) { return p>=5?'pts-5':p>=3?'pts-3':p>=2?'pts-2':'pts-1'; }
+function ptLabel(p) { return p+'pt'+(p>1?'s':''); }
+function earned() { return TASKS.filter(t=>done.has(t.id)).reduce((s,t)=>s+t.pts,0); }
+
+function updateScore() {
+  const e = earned();
+  const pct = Math.round((e/TOTAL_PTS)*100);
+  document.getElementById('pts-display').textContent = e;
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('prog-done').textContent = done.size+' of '+TASKS.length+' complete';
+  document.getElementById('prog-pct').textContent = e+' / '+TOTAL_PTS+' pts';
+  document.getElementById('p-pts').textContent = e;
+  document.getElementById('p-done').textContent = done.size;
+  renderMilestones(e);
+  checkMilestoneToast(e);
+}
+
+function checkMilestoneToast(e) {
+  for (let i=MILESTONES.length-1;i>=0;i--) {
+    if (e>=MILESTONES[i].pts && i>lastMilestone) {
+      lastMilestone=i; showToast('🎉 '+MILESTONES[i].label+'!'); break;
+    }
+  }
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function renderMilestones(e) {
+  document.getElementById('milestones').innerHTML = MILESTONES.map(m=>`
+    <div class="milestone${e>=m.pts?' reached':''}">
+      <div class="milestone-dot"></div>
+      <span class="milestone-text">${m.pts} pts — ${m.label}</span>
+    </div>`).join('');
+}
+
+function renderFilters() {
+  document.getElementById('filters').innerHTML = CATS.map(c=>
+    `<button class="ftag${activeCat===c?' active':''}" onclick="setFilter('${c}')">${c}</button>`
+  ).join('');
+}
+
+function setFilter(cat) { activeCat=cat; renderFilters(); renderTasks(); }
+
+function renderTasks() {
+  const wrap = document.getElementById('tasks-wrap');
+  const visible = activeCat==='All' ? TASKS : TASKS.filter(t=>t.cat===activeCat);
+  if (!visible.length) { wrap.innerHTML='<div style="text-align:center;padding:48px 20px;color:var(--dim);font-size:14px;">No tasks in this category.</div>'; return; }
+  let html='', lastCat=null;
+  visible.forEach(t=>{
+    if (activeCat==='All' && t.cat!==lastCat) { html+=`<div class="cat-label">${t.cat}</div>`; lastCat=t.cat; }
+    const isDone=done.has(t.id);
+    html+=`<div class="task-card${isDone?' done':''}" onclick="toggle(${t.id})">
+      <div class="check"><svg class="check-icon" width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="task-body">
+        <div class="task-top">
+          <div class="task-title">${t.title}</div>
+          <span class="pts-badge ${ptClass(t.pts)}">${ptLabel(t.pts)}</span>
+        </div>
+        <div class="task-desc">${t.desc}</div>
+      </div>
+    </div>`;
+  });
+  wrap.innerHTML=html;
+}
+
+function toggle(id) {
+  if (done.has(id)) done.delete(id); else done.add(id);
+  save();
+  const card = document.querySelector(`.task-card[onclick="toggle(${id})"]`);
+  if (card) card.classList.toggle('done',done.has(id));
+  updateScore();
+  // debounce score push
+  clearTimeout(toggle._t);
+  toggle._t = setTimeout(pushScore, 1500);
+}
+
+async function resetAll() {
+  if (!confirm('Reset all your progress?')) return;
+  done.clear(); save(); lastMilestone=-1;
+  renderTasks(); updateScore(); await pushScore();
+}
+
+function logout() {
+  if (!confirm('Log out and change your username?')) return;
+  localStorage.removeItem('k26-username');
+  localStorage.removeItem('k26-userid');
+  location.reload();
+}
+
+function shareHunt() {
+  const url = window.location.href;
+  if (navigator.share) navigator.share({title:'K26 Scavenger Hunt',text:"I'm playing the K26 Scavenger Hunt! Join me 👇",url});
+  else navigator.clipboard.writeText(url).then(()=>showToast('Link copied!')).catch(()=>showToast('Copy the URL to share'));
+}
+
+// ══════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════
+function switchTab(tab, btn) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab==='lb') loadLeaderboard();
+  if (tab==='chat') { unreadChat=0; updateChatBadge(); renderChat(); }
+  if (tab==='profile') renderProfile();
+}
+
+// ══════════════════════════════════════════
+//  PROFILE
+// ══════════════════════════════════════════
+function renderProfile() {
+  const av = document.getElementById('profile-av-big');
+  av.textContent = avatarInitials(username);
+  av.style.background = avatarColor(username);
+  av.style.width = '64px'; av.style.height = '64px'; av.style.fontSize = '24px';
+  document.getElementById('profile-name-display').textContent = username;
+  document.getElementById('profile-since').textContent = 'K26 Attendee · Las Vegas 2026';
+  document.getElementById('p-pts').textContent = earned();
+  document.getElementById('p-done').textContent = done.size;
+  updateProfileRank();
+}
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function timeAgo(ts) {
+  const d = Date.now()-ts, s=Math.floor(d/1000), m=Math.floor(s/60), h=Math.floor(m/60), dy=Math.floor(h/24);
+  if (s<10) return 'just now'; if (s<60) return s+'s ago'; if (m<60) return m+'m ago';
+  if (h<24) return h+'h ago'; return dy+'d ago';
+}
+
+// ══════════════════════════════════════════
+//  CHAT ENTER KEY
+// ══════════════════════════════════════════
+document.getElementById('chat-input').addEventListener('keydown', e=>{
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// ══════════════════════════════════════════
+//  PWA / INSTALL
+// ══════════════════════════════════════════
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById('install-banner').classList.add('show');
+});
+document.getElementById('install-btn').addEventListener('click', ()=>{
+  if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; document.getElementById('install-banner').classList.remove('show'); }); }
+});
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+function initApp() {
+  renderFilters(); renderTasks(); updateScore();
+  loadChat();
+  // polling
+  chatPollingInterval = setInterval(pollChat, 12000);
+  lbPollingInterval   = setInterval(()=>{ if(document.getElementById('screen-lb').classList.contains('active')) loadLeaderboard(); }, 30000);
+  // post join message
+  const joinKey = 'k26-joined-'+userId;
+  if (!sessionStorage.getItem(joinKey)) {
+    sessionStorage.setItem(joinKey,'1');
+    const ts = Date.now();
+    stoSet('chat:'+ts+'_join', {type:'system', text:username+' joined the hunt! 🎉', ts});
+  }
+}
+
+// ══════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════
+if (username && userId) {
+  document.getElementById('onboard').style.display='none';
+  initApp();
+} else {
+  document.getElementById('onboard').style.display='flex';
+}
+</script>
+</body>
+</html>
